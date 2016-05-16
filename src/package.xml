@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Package xmlns="http://soap.sforce.com/2006/04/metadata">
     <types>
+        <members>Orc_BatchableActionOrchestrator</members>
         <members>Orc_ScheduledOrchestrationManager</members>
         <members>Orc_ScheduledOrchestrationManagerHelper</members>
         <name>ApexClass</name>
@@ -23,6 +24,10 @@
         <members>Orchestrated_Action_Queue__c</members>
         <members>Scheduled_Orchestration_Manager_Log__c</members>
         <name>CustomObject</name>
+    </types>
+    <types>
+        <members>*</members>
+        <name>CustomTab</name>
     </types>
     <types>
         <members>Orchestrated_Action_Log__c-Orchestrated Action Log Layout</members>

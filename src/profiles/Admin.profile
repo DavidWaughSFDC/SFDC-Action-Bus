@@ -6,6 +6,10 @@
         <visible>true</visible>
     </applicationVisibilities>
     <classAccesses>
+        <apexClass>Orc_BatchableActionOrchestrator</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
         <apexClass>Orc_ScheduledOrchestrationManager</apexClass>
         <enabled>true</enabled>
     </classAccesses>
@@ -106,6 +110,18 @@
         <object>Scheduled_Orchestration_Manager_Log__c</object>
         <viewAllRecords>true</viewAllRecords>
     </objectPermissions>
+    <tabVisibilities>
+        <tab>Orchestrated_Action_Log__c</tab>
+        <visibility>DefaultOn</visibility>
+    </tabVisibilities>
+    <tabVisibilities>
+        <tab>Orchestrated_Action_Queue__c</tab>
+        <visibility>DefaultOn</visibility>
+    </tabVisibilities>
+    <tabVisibilities>
+        <tab>Scheduled_Orchestration_Manager_Log__c</tab>
+        <visibility>DefaultOn</visibility>
+    </tabVisibilities>
     <userLicense>Salesforce</userLicense>
     <userPermissions>
         <enabled>true</enabled>
