@@ -20,7 +20,7 @@ Orc_ScheduledOrchestrationManager.manuallyStartJobInMinutes(1);
 Orc_ScheduledOrchestrationManager.manuallyAbortJob();
 ```
 
-###View Orchestration Summary
+#View Orchestration Summary
 
 A summary of Orchestration Manager Job progress, queued items, and batch execution of queued items can be viewed by clicking on the header tab 'Orchestration Summary', or by navigating to the Salesforce-instance-relative path `/apex/Orc_OrchestrationSummary`
 
