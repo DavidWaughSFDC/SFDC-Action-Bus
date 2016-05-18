@@ -2,6 +2,7 @@
 <Package xmlns="http://soap.sforce.com/2006/04/metadata">
     <types>
         <members>Orc_BatchableActionOrchestrator</members>
+        <members>Orc_BatchableActionOrchestratorHelper</members>
         <members>Orc_OrchestrationSummaryController</members>
         <members>Orc_ScheduledOrchestrationManager</members>
         <name>ApexClass</name>

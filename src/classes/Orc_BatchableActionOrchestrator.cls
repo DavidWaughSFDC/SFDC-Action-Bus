@@ -30,6 +30,6 @@ global class Orc_BatchableActionOrchestrator implements Database.Batchable<sObje
     
     global void finish(Database.BatchableContext BC)
     {
-        Orc_ScheduledOrchestrationManager.abortAndReschedule();
+        Orc_ScheduledOrchestrationManagerHelper.abortAndReschedule();
     }
 }
