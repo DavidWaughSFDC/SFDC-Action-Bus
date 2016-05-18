@@ -10,15 +10,15 @@
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
-        <apexClass>Orc_BatchableActionOrchestratorHelper</apexClass>
-        <enabled>true</enabled>
-    </classAccesses>
-    <classAccesses>
         <apexClass>Orc_OrchestrationSummaryController</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
         <apexClass>Orc_ScheduledOrchestrationManager</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>Orc_ScheduledOrchestrationManagerHelper</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <custom>false</custom>
