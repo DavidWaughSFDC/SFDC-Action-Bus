@@ -1,5 +1,8 @@
 global class Orc_BatchableActionOrchestrator implements Database.Batchable<sObject>, Database.Stateful, Database.AllowsCallouts 
 {
+    public static final String ACTION_ERP_ACCOUNT_CREATE = 'ERP Create Account';
+    public static final String ACTION_ERP_ACCOUNT_UPDATE = 'ERP Update Account';
+    
     public class Orc_BatchableActionOrchestratorException extends Exception { }
     
     global List<Orchestrated_Action_Queue__c> targetQueueItems;
@@ -27,6 +30,6 @@ global class Orc_BatchableActionOrchestrator implements Database.Batchable<sObje
     
     global void finish(Database.BatchableContext BC)
     {
-        Orc_ScheduledOrchestrationManagerHelper.abortAndReschedule();
+        Orc_ScheduledOrchestrationManager.abortAndReschedule();
     }
 }

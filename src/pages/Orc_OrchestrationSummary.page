@@ -1,0 +1,473 @@
+<apex:page controller="Orc_OrchestrationSummaryController">
+	<apex:includeScript value="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js" />
+	<apex:includeScript value="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.3/jquery-ui.min.js" />
+	<apex:includescript value="https://cdn.datatables.net/1.10.4/js/jquery.dataTables.min.js" />
+	<apex:stylesheet value="https://cdn.datatables.net/1.10.4/css/jquery.dataTables.css" />
+	<apex:stylesheet value="https://ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/themes/cupertino/jquery-ui.min.css" /> 
+
+	<script>
+		Visualforce.remoting.timeout = 120000; // Set timeout at page level
+
+		// This remoting call will use the page's timeout value
+        function getSummaryPageJSONAndThenRefreshFields() 
+        {
+        	Visualforce.remoting.Manager.invokeAction(
+	            '{!$RemoteAction.Orc_OrchestrationSummaryController.getSummaryPageJSON}', getSummaryPageJSONCallback);
+        }
+
+        function getSummaryPageJSONCallback(result, event) 
+        {
+        	if (event.status)
+        	{
+        		if (result.orchestrationManagerNextFireTime != null && result.scheduledJobStatus != 'Processing' && result.scheduledJobStatus != 'Preparing')
+        		{
+                    showStatusBar("batch-manager-progress-bar", true);
+        			showStatusBar("business-world-sync-progress-bar", false);
+        			showMessage("business-world-sync-status-message", false);
+        			
+        			updateActionTotals(result.totalActionsInQueue, 
+    								   result.totalCreateActionsInQueue, 
+    								   result.totalUpdateActionsInQueue);
+        			
+        			updateBatchManagerRow(result.orchestrationManagerState, result.orchestrationManagerMinutesBetweenBatches, result.orchestrationManagerNextFireTime, 0);
+        		}
+        		else if (result.scheduledJobStatus == 'Processing' || result.scheduledJobStatus == 'Preparing')
+    			{
+    				showStatusBar("batch-manager-progress-bar", false);
+    				showStatusBar("business-world-sync-progress-bar", true);
+    				showMessage("business-world-sync-status-message", true);
+
+    				var businessWorldSyncProgressRatioTotal = document.getElementById("business-world-sync-queued-actions-message").innerHTML;
+    				updateBusinessWorldSyncRow(result.scheduledJobStatus, result.currentBatchCount * result.actionsPerBatch, (businessWorldSyncProgressRatioTotal != null ? businessWorldSyncProgressRatioTotal : 0) );
+    			}
+        		else
+        		{
+        			showStatusBar("batch-manager-progress-bar", false);
+        			document.getElementById("batch-manager-status-message").innerHTML = '-not scheduled-';
+					showStatusBar("business-world-sync-progress-bar", false);
+					showMessage("business-world-sync-status-message", false);
+					
+					updateActionTotals(result.totalActionsInQueue, 
+    								   result.totalCreateActionsInQueue, 
+    								   result.totalUpdateActionsInQueue)
+        		
+        			//check to see if this is the observed case where no cron trigger exists because
+        			//job is rescheduling (observed to take up to 30 seconds to resolve with new nextFireTime value
+        			setTimeout(getSummaryPageJSONAndThenRefreshFields, 5000);
+        		}
+        	}
+            else //event.type == 'exception' or some other error
+            {
+                document.getElementById("batch-manager-status-message").innerHTML = 'Error: ' + event.message;
+            }
+        }
+
+        function showStatusBar(domElementId, isVisible)
+        {
+        	var displayValue = 'none';
+        	if (isVisible)
+        	{
+        		displayValue = 'block';
+        	}
+        	
+        	document.getElementById(domElementId).style.display = displayValue;
+        }
+
+        function showMessage(domElementId, isVisible)
+        {
+        	var displayValue = 'none';
+        	if (isVisible)
+        	{
+        		displayValue = 'block';
+        	}
+        	
+        	document.getElementById(domElementId).style.display = displayValue;
+        }
+
+        function updateActionTotals(actionTotal, finCreateTotal, finUpdateTotal)
+        {
+			document.getElementById("business-world-sync-queued-actions-message").innerHTML = actionTotal;
+			document.getElementById("business-world-account-create-queued-actions-message").innerHTML = finCreateTotal;
+			document.getElementById("business-world-account-update-queued-actions-message").innerHTML = finUpdateTotal;
+        }
+
+        function updateBatchManagerProgressBar(progressBarIdName, progressCount, maxCount)
+        {
+        	if (progressCount > 0 && maxCount > 0 && progressBarIdName != null)
+        	{
+        		document.getElementById(progressBarIdName).value = 1 - progressCount/maxCount;
+        	}
+        }
+
+        function updateOrcSummaryProgressBar(progressBarIdName, progressCount, maxCount)
+        {
+        	if (progressCount > 0 && maxCount > 0 && progressBarIdName != null)
+        	{
+        		document.getElementById(progressBarIdName).value = progressCount/maxCount;
+        	}
+        }
+
+		function updateBatchManagerRow(state, minsBetweenBatches, nextFireTime, i)
+		{
+			if ((state == 'WAITING' || state == 'ACQUIRED') && minsBetweenBatches != null && nextFireTime != null && i != null)
+			{
+                var tNow = new Date();
+			    var mNow = tNow.getMinutes();  
+                var sNow = tNow.getSeconds();
+
+			    var tTarget = new Date(nextFireTime)
+                var mTarget = tTarget.getMinutes();  
+                var sTarget = tTarget.getSeconds();
+                
+                var diffSecs = ((mTarget * 60) + sTarget) - ((mNow * 60) + sNow);
+			    var diffSecs = Math.floor(diffSecs);
+
+			    var days = Math.floor(diffSecs/(24*60*60));
+			    var leftSec = diffSecs - days * 24*60*60;
+			    
+			    var hrs = Math.floor(leftSec/(60*60));
+			    var leftSec = leftSec - hrs * 60*60;
+			      
+			    var min = Math.floor(leftSec/(60));
+			    var leftSec = leftSec - min * 60;
+
+			    //add leading zero to seconds if needed
+			    var adjustedSec = leftSec;
+			    if (leftSec < 10)
+			    {
+			    	adjustedSec = '0' + leftSec;
+			    }
+
+			    //if countdown has reached 0:00 or if countdown didn't reschedule from 60 minutes (detect with 50 minute test),
+			    //poll for status change.  Note that nextFireTime resets to 1 hour per the pre-rescheduled config before the
+			    //job has status changed from 'ACQUIRED', so the time is the reliable trigger to set state label
+			    if (diffSecs <= 0 || diffSecs > 60 * 50 ) //60 secs x 50 mins
+			    {
+			    	//set 'status' to pending and refresh until nextFireTime is reset to less than minsBetweenBatches
+			    	document.getElementById("batch-manager-status-message").innerHTML = '-' + state.toLowerCase() + '-';
+			    	
+			    	getSummaryPageJSONAndThenRefreshFields();
+			    }
+			    else if (i >= 10)
+			    {
+			    	//update time and refresh job status because of increment threshold
+			    	document.getElementById("batch-manager-status-message").innerHTML = min + ":" + adjustedSec;
+
+			    	updateBatchManagerProgressBar("batch-manager-progress-bar", diffSecs, minsBetweenBatches * 60);
+			    	getSummaryPageJSONAndThenRefreshFields();
+			    }
+			    else
+			    {
+			    	i++;
+			    	//update time without checking job state
+			    	document.getElementById("batch-manager-status-message").innerHTML = min + ":" + adjustedSec;
+			    	updateBatchManagerProgressBar("batch-manager-progress-bar", diffSecs, minsBetweenBatches * 60);
+			    	setTimeout(updateBatchManagerRow, 1000, state, minsBetweenBatches, nextFireTime, i);
+
+			    }
+		    }
+		    else // state != 'WAITING' && state != 'ACQUIRED'
+		    {        			
+		    	document.getElementById("batch-manager-status-message").innerHTML = '-' + state.toLowerCase() + '-';
+		    	getSummaryPageJSONAndThenRefreshFields();
+		    }
+		}
+
+		function updateBusinessWorldSyncRow(status, currentActionCount, maxActionCount)
+		{
+			updateOrcSummaryProgressBar("business-world-sync-progress-bar", currentActionCount, maxActionCount);
+
+			var businessWorldSyncRowMessage = '';
+			if (status == 'Processing')
+			{	
+				if (currentActionCount < maxActionCount)
+				{
+					businessWorldSyncRowMessage = ' ' + currentActionCount + ' / ' + maxActionCount; 
+				}
+				else
+				{
+					businessWorldSyncRowMessage = ' ' + maxActionCount + ' / ' + maxActionCount; 
+				}	
+			}
+			else
+			{
+				businessWorldSyncRowMessage = '-' + status.toLowerCase() + '-';
+			}
+
+			document.getElementById("business-world-sync-status-message").innerHTML = businessWorldSyncRowMessage;
+		
+			getSummaryPageJSONAndThenRefreshFields();
+		}
+
+		j$ = jQuery.noConflict();
+		j$(document).ready(function() {
+            
+			j$('#overview-table').DataTable( {
+    			"paging": false,
+    			"searching": false,
+				"ordering": false,
+    			"info": false
+			} );
+
+			//setup tab height
+			j$("#tabs").tabs().css({
+			   'min-height': '400px',
+			   'overflow': 'auto'
+			});
+
+			showStatusBar("batch-manager-progress-bar", false);
+   	 		showStatusBar("business-world-sync-progress-bar", false);
+			getSummaryPageJSONAndThenRefreshFields();
+		});
+
+		j$(function() {
+			j$( "#tabs" ).tabs();
+		});
+	</script>
+
+    <style> 
+
+    	.green-check-16px
+    	{
+			background-image: url(/img/msg_icons/confirm16.png);
+			height: 16px;
+			width: 16px;
+		}
+
+		.red-error-16px
+    	{
+			background-image: url(/img/msg_icons/error16.png);
+			height: 16px;
+			width: 16px;
+		}
+
+		.blue-info-16px
+    	{
+			background-image: url(/img/msg_icons/info16.png);
+			height: 16px;
+			width: 16px;
+		}
+
+		.yellow-warning-16px
+    	{
+			background-image: url(/img/msg_icons/warning16.png);
+			height: 16px;
+			width: 16px;
+		}
+
+		.table-row-icon-child-arrow
+    	{
+			padding-left: 18px;
+			padding-right: 9px;
+			position: relative;
+			top: -1px;
+			float: left;
+			display: block;
+		}
+
+		.table-row-text-when-child-arrow
+    	{
+			float: left;
+			display: block;
+		}
+
+		.table-row-text-when-second-child
+    	{
+			float: left;
+			display: block;
+			margin-left: 85px;
+		}
+
+		#batch-manager-status-countdown
+		{
+			float: left;
+			display: block;
+		}
+
+		.orc-summary-progress-bar
+		{
+			margin: 1px 5px 0px 5px;
+			float: left;
+			display: block;
+			width: 100px;
+		}
+
+		.orc-summary-status-message
+		{
+			margin: 0px 5px 0px 5px;
+		}
+
+		.orc-summary-queued-actions-cell
+		{
+			margin: 0px 5px 0px 5px;
+			max-width: 113px;
+			text-align: right;
+		}
+
+        #orchestration-summary-header
+        {
+            margin-top: 30px;
+            margin-left: 10px;
+            margin-bottom: 25px;
+        }
+        
+        #aud-status-header-caption
+        {
+            float: left;
+            display: block;
+            
+            line-height: 36px;
+            height: 36px;
+            margin-left: 15px;
+        }     
+
+        #orchestration-summary-header h1
+        {
+            font-size: 17px;
+            font-weight: bold;
+        }
+        
+        #orchestration-summary-header
+        {
+            margin-left: 10px;
+            width: 500px;
+        }
+
+        #orchestration-summary-header p
+        {
+            margin-top: 0px !important;
+            padding-left: 153px !important;
+        }
+        
+        #orchestration-summary-header .message
+        {
+            width: 66% !important;
+            margin-top: 15px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .clear
+        {
+            clear:both;
+        }
+
+        .pbTitle
+        {
+            width: 95% !important;
+        }
+
+        .labelCol
+        {
+            width: 30% !important;
+        }
+
+        .pbSubheader
+        {
+            margin-top: 15px !important;
+            border-top-width: 1px !important;
+            border-top-style: solid !important;
+            border-top-color: rgb(255, 255, 255) !important;
+        }
+
+        .pbSubheader.first 
+        {
+            margin-top: 15px !important;         
+            border-top-width: 1px !important;
+            border-top-style: solid !important;
+            border-top-color: rgb(255, 255, 255) !important;
+        }
+        
+        .history-first-level-indent
+        {
+        	padding-left: 30px;
+        }
+
+    </style>
+    <div id="orchestration-summary-header">
+         <apex:image id="StatusIcon" style="float: left; display: block;" value="{!$Resource.System_Icon_Small}" width="32" height="32"/>
+         <div id="aud-status-header-caption">
+             <h1>Orchestration Summary:</h1>
+         </div>
+         <div class="clear"></div>
+    </div>
+
+    <div id="tabs">
+		<ul>
+			<li><a href="#tabs-1">Overview</a></li>
+			<li><a href="#tabs-2">Systems Testing</a></li>
+		</ul>
+		<div id="tabs-1">
+			<table id="overview-table" class="hover">
+				<thead>
+					<tr>
+						<th>Scheduled Event</th>
+						<th>Queued Actions</th>
+						<th>Status</th>
+						<th>History</th>
+					</tr>
+				</thead>
+				<tbody>
+					<!-- Orchestrations Manager Row -->
+					<tr>
+						<td>Orchestrations Manager</td>
+						<td></td>
+						<td id="batch-manager-status-cell">
+							<progress id="batch-manager-progress-bar" class="orc-summary-progress-bar" value="0"></progress>
+							<div id="batch-manager-status-message" class="orc-summary-status-message"></div>
+						</td>
+						<td>
+							<div class="history">
+                                <apex:outputLink value="{!URLFOR($Action.Scheduled_Orchestration_Manager_Log__c.List,$ObjectType.Scheduled_Orchestration_Manager_Log__c)}">Manager History</apex:outputLink>
+             				</div>
+						</td>
+					</tr>
+					<!-- Business World Actions Summary Row -->
+					<tr>
+						<td>
+							<div class="table-row-icon-child-arrow"><apex:image value="{!$Resource.Child_Arrow_Very_Small}" width="20" height="13"/></div>
+							<div class="table-row-text-when-child-arrow">Business World Actions</div>
+						</td>
+						<td>
+							<div id="business-world-sync-queued-actions-message" class="orc-summary-queued-actions-cell"></div>
+						</td>
+						<td id="business-world-sync-status-cell">
+							<progress id="business-world-sync-progress-bar" class="orc-summary-progress-bar" value="0"></progress>
+							<div id="business-world-sync-status-message" class="orc-summary-status-message"></div>
+						</td>
+						<td>
+							<div class="history-first-level-indent">
+                            	<apex:outputLink value="{!URLFOR($Action.Orchestrated_Action_Log__c.List,$ObjectType.Orchestrated_Action_Log__c)}">BW Action History</apex:outputLink>
+             				</div>
+						</td>
+					</tr>
+					<!-- Fin Account Create Row -->
+					<tr>
+						<td>
+							<div class="table-row-text-when-second-child">Account Create</div>
+						</td>
+						<td>
+							<div id="business-world-account-create-queued-actions-message" class="orc-summary-queued-actions-cell"></div>
+						</td>
+						<td class="business-world-action-status-cell"></td>
+						<td></td>
+					</tr>
+					<!-- Fin Account Update Row -->
+					<tr>
+						<td>
+							<div class="table-row-text-when-second-child">Account Update</div>
+						</td>
+						<td>
+							<div id="business-world-account-update-queued-actions-message" class="orc-summary-queued-actions-cell"></div>
+						</td>
+						<td class="business-world-action-status-cell"></td>
+						<td></td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+		<div id="tabs-2">
+			<p>Under development</p>
+		</div>
+	</div>
+</apex:page>

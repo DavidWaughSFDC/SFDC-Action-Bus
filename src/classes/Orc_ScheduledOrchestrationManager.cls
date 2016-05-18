@@ -9,7 +9,7 @@ global class Orc_ScheduledOrchestrationManager implements Schedulable
     private static final String MANUALLY_SCHEDULE_JOB_EVENT_NAME = 'Manually Schedule Orc_ScheduledOrchestrationManager Job';
     private static final String MANUALLY_ABORT_JOB_EVENT_NAME = 'Manually Abort Orc_ScheduledOrchestrationManager Job';
 
-    public static final Integer MINUTES_TO_NEXT_BATCH_EXECUTION = 3;
+    public static final Integer MINUTES_TO_NEXT_SCHEDULED_EXECUTION = 3;
     public static final Integer ACTIONS_PER_BATCH = 25;
 
 	global void execute(SchedulableContext sc) 
@@ -23,9 +23,7 @@ global class Orc_ScheduledOrchestrationManager implements Schedulable
 			// if batch is not already executing
 			if (!isBatchableActionOrchestratorAlreadyRunning())
 			{
-
-				Orc_BatchableActionOrchestrator actionOrchestrator = new Orc_BatchableActionOrchestrator();
-				Id batchId = database.executebatch(actionOrchestrator, ACTIONS_PER_BATCH);
+				Id batchId = Orc_ScheduledOrchestrationManagerHelper.startBatchableActionOrchestrator(ACTIONS_PER_BATCH);
 				
 				orcManagerLog.Was_Successful__c = true;
 				orcManagerLog.Batch_Id__c = batchId;
@@ -66,7 +64,7 @@ global class Orc_ScheduledOrchestrationManager implements Schedulable
 		//reschedule in 3 mins;
 		abortJob();
 
-		String sch = generateNextScheduleString(MINUTES_TO_NEXT_BATCH_EXECUTION);
+		String sch = generateNextScheduleString(MINUTES_TO_NEXT_SCHEDULED_EXECUTION);
 		startJob(sch, RESCHEDULE_JOB_EVENT_NAME);
 
 		//TODO:

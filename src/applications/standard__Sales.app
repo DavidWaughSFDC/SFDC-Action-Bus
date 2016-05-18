@@ -12,4 +12,5 @@
     <tab>Scheduled_Orchestration_Manager_Log__c</tab>
     <tab>Orchestrated_Action_Queue__c</tab>
     <tab>Orchestrated_Action_Log__c</tab>
+    <tab>Orchestration_Summary</tab>
 </CustomApplication>

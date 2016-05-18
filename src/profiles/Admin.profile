@@ -10,11 +10,11 @@
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
-        <apexClass>Orc_ScheduledOrchestrationManager</apexClass>
+        <apexClass>Orc_OrchestrationSummaryController</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
-        <apexClass>Orc_ScheduledOrchestrationManagerHelper</apexClass>
+        <apexClass>Orc_ScheduledOrchestrationManager</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <custom>false</custom>
@@ -55,7 +55,7 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Orchestrated_Action_Queue__c.Acton__c</field>
+        <field>Orchestrated_Action_Queue__c.Action__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
@@ -98,6 +98,15 @@
         <allowEdit>true</allowEdit>
         <allowRead>true</allowRead>
         <modifyAllRecords>true</modifyAllRecords>
+        <object>Orchestrated_Action_Log__c</object>
+        <viewAllRecords>true</viewAllRecords>
+    </objectPermissions>
+    <objectPermissions>
+        <allowCreate>true</allowCreate>
+        <allowDelete>true</allowDelete>
+        <allowEdit>true</allowEdit>
+        <allowRead>true</allowRead>
+        <modifyAllRecords>true</modifyAllRecords>
         <object>Orchestrated_Action_Queue__c</object>
         <viewAllRecords>true</viewAllRecords>
     </objectPermissions>
@@ -110,12 +119,20 @@
         <object>Scheduled_Orchestration_Manager_Log__c</object>
         <viewAllRecords>true</viewAllRecords>
     </objectPermissions>
+    <pageAccesses>
+        <apexPage>Orc_OrchestrationSummary</apexPage>
+        <enabled>true</enabled>
+    </pageAccesses>
     <tabVisibilities>
         <tab>Orchestrated_Action_Log__c</tab>
         <visibility>DefaultOn</visibility>
     </tabVisibilities>
     <tabVisibilities>
         <tab>Orchestrated_Action_Queue__c</tab>
+        <visibility>DefaultOn</visibility>
+    </tabVisibilities>
+    <tabVisibilities>
+        <tab>Orchestration_Summary</tab>
         <visibility>DefaultOn</visibility>
     </tabVisibilities>
     <tabVisibilities>
